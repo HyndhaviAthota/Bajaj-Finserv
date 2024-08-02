@@ -1,0 +1,87 @@
+const express = require('express');
+const app = express();
+const bodyParser = require('body-parser');
+
+// Replace with a more secure authentication mechanism
+function authenticateUser(req) {
+  const expectedUsername = 'your_username'; // Replace with actual username
+  const expectedPassword = 'your_password'; // Replace with actual password
+
+  // Check for username and password in request headers (replace with better approach)
+  const authorization = req.headers.authorization;
+  if (!authorization || !authorization.startsWith('Basic ')) {
+    return false;
+  }
+
+  const credentials = Buffer.from(authorization.substring(6), 'base64').toString().split(':');
+  return credentials[0] === expectedUsername && credentials[1] === expectedPassword;
+}
+
+// Information for the single user
+const userInfo = {
+  user_id: "SRM AP",
+  email: "hyndhavi_athota@srmap.edu.in",
+  roll_number: "AP21110010965",
+};
+
+app.use(bodyParser.json());
+
+// POST /bfhl endpoint
+app.post('/bfhl', (req, res) => {
+  try {
+    if (!authenticateUser(req)) {
+      return res.status(401).json({ is_success: false, error: 'Unauthorized access' });
+    }
+
+    const data = req.body.data;
+    if (!Array.isArray(data)) {
+      throw new Error('Invalid request format. Data should be an array.');
+    }
+
+    const numbers = [];
+    const alphabets = [];
+    let highestAlphabet;
+
+    for (const item of data) {
+      if (typeof item === 'string') {
+        alphabets.push(item.toUpperCase());
+        highestAlphabet = updateHighestAlphabet(highestAlphabet, item);
+      } else if (typeof item === 'number') {
+        numbers.push(item);
+      } else {
+        throw new Error('Invalid data type in input array.');
+      }
+    }
+
+    highestAlphabet = highestAlphabet ? [highestAlphabet] : [];
+
+    res.json({
+      is_success: true,
+      user_id: userInfo.user_id,
+      email: userInfo.email,
+      roll_number: userInfo.roll_number,
+      numbers,
+      alphabets,
+      highest_alphabet,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ is_success: false, error: error.message });
+  }
+});
+
+// GET /bfhl endpoint
+app.get('/bfhl', (req, res) => {
+  res.status(200).json({ operation_code: 1 });
+});
+
+// Function to update highest alphabet
+function updateHighestAlphabet(current, newChar) {
+  if (!current || newChar.charCodeAt(0) > current.charCodeAt(0)) {
+    return newChar;
+  }
+  return current;
+}
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`Server listening on port ${port}`));
